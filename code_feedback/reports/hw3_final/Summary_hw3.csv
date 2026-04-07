@@ -1,0 +1,4 @@
+student_id,tests_passed,tests_total,score_percentage,bert_similarity,concept_score,semantic_summary
+student_1,0,7,0.00,0.9348,7,"Consider optimizing your loop to check divisors only up to the square root of n, as a prime number has no factors greater than its square root."
+student_2,0,7,0.00,0.9318,7,"Since there is no runtime error reported, the code may not be executed in your environment. Please ensure you are running this Python script correctly and that it has access to necessary libraries such as math."
+student_3,0,7,0.00,0.9318,7,"Consider checking if the loop should start from `i = 3` and increment by 2, since all primes greater than 2 are odd."

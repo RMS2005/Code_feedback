@@ -1,0 +1,3 @@
+student_id,tests_passed,tests_total,score_percentage,bert_similarity,concept_score,semantic_summary
+student_1,2,2,100.00,0.0000,7,"The function does not handle the case when `n` is zero, which should return 0 as per Fibonacci sequence definition. Consider adding a base case for n=0."
+student_2,2,2,100.00,0.0000,7,"Consider checking the base cases for negative inputs, as they might not be handled correctly and could lead to an infinite recursion."

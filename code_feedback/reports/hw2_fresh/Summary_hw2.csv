@@ -1,0 +1,3 @@
+student_id,tests_passed,tests_total,score_percentage,bert_similarity,concept_score,semantic_summary
+student_1,2,2,100.00,0.8781,7,"Consider checking if the input conversion to integers is correctly handling and parsing all possible inputs, as this could lead to unhandled exceptions when non-integer values are encountered."
+student_2,2,2,100.00,0.8883,7,Consider checking if the input data contains exactly two integers and handle cases where it might not.

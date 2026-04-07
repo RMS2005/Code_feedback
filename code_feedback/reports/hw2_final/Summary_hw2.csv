@@ -1,0 +1,3 @@
+student_id,tests_passed,tests_total,score_percentage,bert_similarity,concept_score,semantic_summary
+student_1,2,2,100.00,0.8781,7,"Consider checking the logic that handles input validation and conversion to integers, as well as ensuring you're correctly using sys.stdin for reading inputs."
+student_2,2,2,100.00,0.8883,7,"The function does not return a value, which might be intentional for this specific problem; however, if the requirement is to output results explicitly or store them in variables outside of your function scope. Consider adding an explicit 'return' statement at the end."

@@ -1,0 +1,18 @@
+{
+    "assignment_id": "hw3",
+    "name": "Prime Number Checker",
+    "description": "Write a function 'is_prime(n)' that returns True if n is prime and False otherwise.",
+    "language": "python",
+    "test_cases": [
+        { "name": "composite_low", "input": "4", "expected_output": "False" },
+        { "name": "prime_high", "input": "17", "expected_output": "True" },
+        { "name": "composite_high", "input": "20", "expected_output": "False" }
+    ],
+    "edge_cases": [
+        { "name": "prime_edge_2", "input": "2", "expected_output": "True" },
+        { "name": "negative_number", "input": "-5", "expected_output": "False" },
+        { "name": "zero_case", "input": "0", "expected_output": "False" },
+        { "name": "one_case", "input": "1", "expected_output": "False" }
+    ],
+    "reference_solution": "def is_prime(n):\n    if n < 2: return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0: return False\n    return True"
+}

@@ -1,0 +1,20 @@
+{
+    "assignment_id": "hw1",
+    "assignment_name": "Fibonacci",
+    "execution_mode": {
+        "type": "program"
+    },
+    "test_cases": [
+        {
+            "name": "test1",
+            "input": "5",
+            "expected_output": "5"
+        },
+        {
+            "name": "test2",
+            "input": "6",
+            "expected_output": "8"
+        }
+    ],
+    "reference_solution": "def fib(n):\n    if n <= 1:\n        return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b"
+}

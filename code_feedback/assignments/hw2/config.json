@@ -1,0 +1,23 @@
+{
+  "assignment_id": "hw2",
+  "assignment_name": "Addition Program",
+  "problem_statement": "Write a program that reads two space-separated integers and prints their sum.",
+  "reference_solution": "import sys\nline = sys.stdin.read().strip()\nif line:\n    a, b = map(int, line.split())\n    print(a + b)",
+  "execution_mode": {
+    "type": "program"
+  },
+  "test_cases": [
+    {
+      "name": "basic_add",
+      "input": "2345 3987",
+      "expected_output": "6332"
+    }
+  ],
+  "edge_cases": [
+    {
+      "name": "large_numbers",
+      "input": "123456789 987654321",
+      "expected_output": "1111111110"
+    }
+  ]
+}

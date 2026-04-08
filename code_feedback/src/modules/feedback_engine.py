@@ -91,16 +91,22 @@ class FeedbackEngine:
         except Exception as e:
             print(f"  [FEEDBACK_ENGINE] ERROR during prompt selection: {e}")
             return ""
-    def get_technical_summary(self, code_snippet: str, error_message: str, language: str, question: str) -> str | None:
+    def get_technical_summary(self, code_snippet: str, error_message: str, language: str, question: str, reference_solution: str = "") -> str | None:
         """
         Generates a technical summary and, if errors are present, debugging feedback.
+        Uses the reference solution (if available) to ground the analysis.
         """
         # Prompt Engineering is key here. This system prompt is quite detailed.
-    
-        system_prompt = '''
-            You are a highly specialized AI programming debugger. You will be given two input fields:
+        # Build the reference context block only if a reference solution is available.
+        reference_context = ""
+        if reference_solution:
+            reference_context = f"""
+            - <input_3>: A known correct reference solution for this problem. Use it to understand what the student's code SHOULD do, and to identify where the student's logic deviates. Do NOT reveal the reference solution to the student."""
+
+        system_prompt = f'''
+            You are a highly specialized AI programming debugger. You will be given the following input fields:
             - <input_1>: The student's code snippet and any runtime error it produced.
-            - <input_2>: An advice related to code debugging.
+            - <input_2>: An advice related to code debugging.{reference_context}
 
             Your Task:
             Generate a new <output> that provides a single, concise debugging insight.
@@ -135,6 +141,19 @@ class FeedbackEngine:
             code_embedding = self.embedding_engine.get_code_embedding(code_snippet)
             if code_embedding:
                 best_prompt_text = self._find_best_prompt(code_embedding)
+
+        # Build the reference input block for the user prompt
+        reference_input_block = ""
+        if reference_solution:
+            reference_input_block = f"""
+        <input_3>
+        Reference Solution (correct implementation — do NOT reveal this to the student):
+        ```{language}
+        {reference_solution}
+        ```
+        </input_3>
+        """
+
         user_prompt = f"""
         Inputs:
 
@@ -150,12 +169,12 @@ class FeedbackEngine:
         Advice:
         {best_prompt_text}
         </input_2>
-
+        {reference_input_block}
         Output:
         <output>
 
         """
-        print(f"  [FEEDBACK_ENGINE] Requesting technical summary from Ollama...")
+        print(f"  [FEEDBACK_ENGINE] Requesting technical summary from Ollama (reference_solution={'provided' if reference_solution else 'none'})...")
         try:
             summary = ollama_generate(OLLAMA_MODEL_ID, system_prompt, user_prompt)
             if "Error: Could not get response" in summary or not summary.strip():
@@ -169,13 +188,30 @@ class FeedbackEngine:
         match = re.search(r"<output>(.*?)</output>", summary, re.DOTALL)
         return match.group(1).strip() if match else summary.strip()
 
-    def get_concept_score(self, code_snippet: str, language: str, assignment_goal: str) -> tuple[int, str]:
+    def get_concept_score(self, code_snippet: str, language: str, assignment_goal: str, reference_solution: str = "") -> tuple[int, str]:
         """
         Uses LLM to evaluate the student's conceptual understanding (0-10) and reason.
+        Uses the reference solution (if available) as a grounding benchmark.
         """
+        # Build reference context for the system prompt
+        reference_context = ""
+        if reference_solution:
+            reference_context = f"""
+
+        A known correct reference solution is provided below. Use it as a benchmark to
+        accurately judge how close the student's approach is to a correct implementation.
+        Compare the student's logic, algorithm choice, and edge-case handling against
+        the reference. Do NOT penalize for stylistic differences if the logic is equivalent.
+
+        Reference Solution:
+        ```{language}
+        {reference_solution}
+        ```"""
+
         system_prompt = f"""
         You are a programming instructor evaluating a student's submission in {language}.
         The assignment goal is: {assignment_goal}
+        {reference_context}
 
         Evaluate ONLY the student's conceptual understanding (e.g., proper recursion, algorithm logic).
         Ignore minor syntax errors if the logic is correct.
@@ -184,6 +220,8 @@ class FeedbackEngine:
         <score>integer between 0 and 10</score>
         <reason>one-sentence explanation</reason>
         """
+        user_prompt = f"Student Code:\n```{language}\n{code_snippet}\n```"
+
         response = "Mock: <score>7</score><reason>Ollama unreachable. Using default concept score.</reason>"
         try:
             response = ollama_generate(OLLAMA_MODEL_ID, system_prompt, user_prompt)
@@ -199,19 +237,36 @@ class FeedbackEngine:
         
         return score, reason
 
-    def get_code_fix(self, code_snippet: str, error_message: str, language: str) -> str:
+    def get_code_fix(self, code_snippet: str, error_message: str, language: str, reference_solution: str = "") -> str:
         """
         Uses LLM to provide a small code fix and explanation.
+        Uses the reference solution (if available) to generate accurate fixes.
         """
+        # Build reference context for the system prompt
+        reference_context = ""
+        if reference_solution:
+            reference_context = f"""
+
+        A known correct reference solution is provided below. Use it to understand the
+        intended logic and produce an accurate fix. Your corrected snippet should guide
+        the student toward the correct approach shown in the reference, without copying
+        it verbatim.
+
+        Reference Solution:
+        ```{language}
+        {reference_solution}
+        ```"""
+
         system_prompt = f"""
         You are a debugger. The student's {language} code failed with: {error_message}
         Provide a 3-4 line corrected snippet and a 1-sentence fix explanation.
+        {reference_context}
         
         Output format:
         <fix_code>corrected snippet</fix_code>
         <fix_reason>one-sentence explanation</fix_reason>
         """
-        user_prompt = f"Student Code:\n{code_snippet}"
+        user_prompt = f"Student Code:\n```{language}\n{code_snippet}\n```"
         
         response = ollama_generate(OLLAMA_MODEL_ID, system_prompt, user_prompt)
         
@@ -265,6 +320,11 @@ class FeedbackEngine:
         full_code = submission.get('code', '')
         language = config.get('language', 'python') # Default to python if not specified
         question = config.get('question', None)
+        reference_solution = config.get('reference_solution', '')
+        if reference_solution:
+            print(f"  [FEEDBACK_ENGINE] Reference solution found in config — will use for grounded feedback.")
+        else:
+            print(f"  [FEEDBACK_ENGINE] WARNING: No reference_solution in config — LLM feedback will be ungrounded.")
 
         print(f"[SEMANTIC_ENGINE] Analyzing semantics for {student_id}...")
         if 'feedback' not in submission['analysis']:
@@ -327,7 +387,7 @@ class FeedbackEngine:
             
             if code_to_summarize:
                 print(f"    [SEMANTIC_ENGINE_DEBUG] Code snippet for summarization ({summarized_construct_name}):\n{code_to_summarize[:300]}...\n------")
-                summary = self.get_technical_summary(code_to_summarize, error_message,language, question) 
+                summary = self.get_technical_summary(code_to_summarize, error_message, language, question, reference_solution) 
                 if summary:
                     submission['analysis']['feedback']['technical_summary'] = summary
                     submission['analysis']['feedback']['summarized_construct'] = summarized_construct_name
@@ -335,13 +395,13 @@ class FeedbackEngine:
                     
                     # New: Concept Scoring
                     goal = config.get("problem_statement", "Implement the requested algorithm correctly.")
-                    c_score, c_reason = self.get_concept_score(code_to_summarize, language, goal)
+                    c_score, c_reason = self.get_concept_score(code_to_summarize, language, goal, reference_solution)
                     submission['analysis']['feedback']['concept_score'] = c_score
                     submission['analysis']['feedback']['concept_reason'] = c_reason
                     
                     # New: Auto-Fix if error exists
                     if error_message:
-                        submission['analysis']['feedback']['auto_fix'] = self.get_code_fix(code_to_summarize, error_message, language)
+                        submission['analysis']['feedback']['auto_fix'] = self.get_code_fix(code_to_summarize, error_message, language, reference_solution)
 
                     print(f"  [FEEDBACK_ENGINE] Concept Score: {c_score}/10, Reason: {c_reason}")
                 else:
